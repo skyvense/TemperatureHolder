@@ -38,22 +38,37 @@ const int mqttPort = 1883;
 
 // MQTT主题
 const char* vStatusTopic = "/esptempholder/data";
+const char* vControlTopicSetMin = "/esptempholder/set_min";
+const char* vControlTopicSetMax = "/esptempholder/set_max";
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
 
 
+float min_temperature = 27.0;
+float max_temperature = 31.0;
+
 // 回调函数，用于处理接收到的MQTT消息
 void callback(char* topic, byte* payload, unsigned int length) {
   // 仅处理与controlTopic匹配的消息
-  if (strcmp(topic, "---------") == 0) {
+  if (strcmp(topic, vControlTopicSetMin) == 0) {
     String message;
     for (int i = 0; i < length; i++) {
       message += (char)payload[i];
     }
     Serial.print(message.c_str());
+    min_temperature = message.toFloat();
+    Serial.printf("min_temperature changed to %f\n", min_temperature);
   }
-
+  if (strcmp(topic, vControlTopicSetMax) == 0) {
+    String message;
+    for (int i = 0; i < length; i++) {
+      message += (char)payload[i];
+    }
+    Serial.print(message.c_str());
+    max_temperature = message.toFloat();
+    Serial.printf("max_temperature changed to %f\n", max_temperature);
+  }
 }
 
 
@@ -80,12 +95,12 @@ void setup() {
 
 void switchHotAir(float temp)
 {
-  if (temp < 27.0)
+  if (temp < min_temperature)
   {
     Serial.print("Hot Air ON\n");
     digitalWrite(D7, LOW);
   }
-  if (temp > 31.0)
+  if (temp > max_temperature)
   {
     Serial.print("Hot Air OFF\n");
     digitalWrite(D7, HIGH);
@@ -118,7 +133,8 @@ void loop() {
       {
         Serial.println("Connected to MQTT server!");
         // 订阅MQTT主题
-        //mqtt.subscribe(textBitmapTopic);
+        mqtt.subscribe(vControlTopicSetMin);
+        mqtt.subscribe(vControlTopicSetMax);
       } 
       else 
       {
